@@ -58,7 +58,7 @@ export default function Login() {
 
       if (error) throw error
     } catch (err) {
-      setError(err.message || 'An error occurred during Google login')
+      setError(err.message || 'An error occurred with Google login')
       setLoading(false)
     }
   }
@@ -79,9 +79,9 @@ export default function Login() {
 
       if (error) throw error
 
-      setMessage('Password reset link sent to your email')
+      setMessage('Password reset email sent! Check your inbox.')
     } catch (err) {
-      setError(err.message || 'An error occurred')
+      setError(err.message || 'An error occurred sending reset email')
     } finally {
       setLoading(false)
     }
@@ -90,26 +90,25 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-[#3b82f6] rounded-xl flex items-center justify-center">
-            <svg
-              className="w-7 h-7 text-white"
-              fill="none"
-              stroke="currentColor"
+        <div className="flex justify-center">
+          <div className="w-16 h-16 bg-[#3b82f6] rounded-xl flex items-center justify-center">
+            <svg 
+              className="w-10 h-10 text-white" 
+              fill="none" 
+              stroke="currentColor" 
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" 
               />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-white">TaskFlow</h1>
         </div>
-        <h2 className="text-center text-2xl font-semibold text-white">
-          Welcome back
+        <h2 className="mt-6 text-center text-3xl font-bold text-white">
+          Welcome back to TaskFlow
         </h2>
         <p className="mt-2 text-center text-sm text-slate-400">
           Sign in to manage your tasks and projects
@@ -117,25 +116,22 @@ export default function Login() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-slate-800 py-8 px-4 shadow-xl rounded-2xl sm:px-10 border border-slate-700">
+        <div className="bg-slate-800 py-8 px-4 shadow-xl rounded-xl sm:px-10 border border-slate-700">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg">
               <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
           {message && (
-            <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/50 rounded-lg">
               <p className="text-sm text-green-400">{message}</p>
             </div>
           )}
 
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-slate-300"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-slate-300">
                 Email address
               </label>
               <div className="mt-1">
@@ -147,17 +143,14 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent transition-all"
+                  className="appearance-none block w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent transition-all duration-200"
                   placeholder="you@example.com"
                 />
               </div>
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-slate-300"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-slate-300">
                 Password
               </label>
               <div className="mt-1">
@@ -169,7 +162,7 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent transition-all"
+                  className="appearance-none block w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3b82f6] focus:border-transparent transition-all duration-200"
                   placeholder="••••••••"
                 />
               </div>
@@ -183,10 +176,7 @@ export default function Login() {
                   type="checkbox"
                   className="h-4 w-4 bg-slate-700 border-slate-600 rounded text-[#3b82f6] focus:ring-[#3b82f6] focus:ring-offset-slate-800"
                 />
-                <label
-                  htmlFor="remember-me"
-                  className="ml-2 block text-sm text-slate-400"
-                >
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-400">
                   Remember me
                 </label>
               </div>
@@ -200,54 +190,40 @@ export default function Login() {
               </button>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-[#3b82f6] hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3b82f6] focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {loading ? (
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-              ) : (
-                'Sign in'
-              )}
-            </button>
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#3b82f6] hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3b82f6] focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                {loading ? (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </div>
           </form>
 
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-600" />
+                <div className="w-full border-t border-slate-600"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-800 text-slate-400">
-                  Or continue with
-                </span>
+                <span className="px-2 bg-slate-800 text-slate-400">Or continue with</span>
               </div>
             </div>
 
             <div className="mt-6">
               <button
+                type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-600 rounded-xl shadow-sm text-sm font-medium text-white bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-600 rounded-lg shadow-sm text-sm font-medium text-white bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -260,4 +236,7 @@ export default function Login() {
                   />
                   <path
                     fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
