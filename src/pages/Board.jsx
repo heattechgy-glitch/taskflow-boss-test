@@ -11,154 +11,159 @@ export default function Board() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [newTaskColumn, setNewTaskColumn] = useState('todo')
+  const [newTaskDescription, setNewTaskDescription] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
-  const [editingTask, setEditingTask] = useState(null)
+  const [activeColumn, setActiveColumn] = useState(null)
   const [draggedTask, setDraggedTask] = useState(null)
-  const [dragOverColumn, setDragOverColumn] = useState(null)
+  const [editingTask, setEditingTask] = useState(null)
 
   useEffect(() => {
-    checkUser()
+    getUser()
     fetchTasks()
   }, [])
 
-  async function checkUser() {
+  async function getUser() {
     const { data: { user } } = await supabase.auth.getUser()
     setUser(user)
-    if (!user) {
-      window.location.href = '/login'
-    }
   }
 
   async function fetchTasks() {
     setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('created_at', { ascending: true })
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('created_at', { ascending: true })
 
-      if (error) throw error
-
-      if (data) {
-        const updatedColumns = columns.map(col => ({
-          ...col,
-          tasks: data.filter(task => task.status === col.id)
-        }))
-        setColumns(updatedColumns)
-      }
-    } catch (error) {
+    if (error) {
       console.error('Error fetching tasks:', error)
-    } finally {
       setLoading(false)
+      return
     }
+
+    if (data) {
+      const updatedColumns = columns.map(col => ({
+        ...col,
+        tasks: data.filter(task => task.status === col.id)
+      }))
+      setColumns(updatedColumns)
+    }
+    setLoading(false)
   }
 
   async function addTask() {
-    if (!newTaskTitle.trim()) return
+    if (!newTaskTitle.trim() || !activeColumn) return
 
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert([
-          {
-            title: newTaskTitle,
-            status: newTaskColumn,
-            user_id: user?.id,
-            priority: 'medium'
-          }
-        ])
-        .select()
+    const newTask = {
+      title: newTaskTitle,
+      description: newTaskDescription,
+      status: activeColumn,
+      user_id: user?.id,
+      priority: 'medium',
+      created_at: new Date().toISOString()
+    }
 
-      if (error) throw error
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([newTask])
+      .select()
+      .single()
 
-      if (data) {
-        setColumns(prev => prev.map(col => {
-          if (col.id === newTaskColumn) {
-            return { ...col, tasks: [...col.tasks, data[0]] }
-          }
-          return col
-        }))
-      }
-
-      setNewTaskTitle('')
-      setShowAddModal(false)
-    } catch (error) {
+    if (error) {
       console.error('Error adding task:', error)
+      return
     }
-  }
 
-  async function updateTaskStatus(taskId, newStatus) {
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: newStatus })
-        .eq('id', taskId)
-
-      if (error) throw error
-
-      setColumns(prev => {
-        let movedTask = null
-        const updated = prev.map(col => {
-          const taskIndex = col.tasks.findIndex(t => t.id === taskId)
-          if (taskIndex !== -1) {
-            movedTask = { ...col.tasks[taskIndex], status: newStatus }
-            return { ...col, tasks: col.tasks.filter(t => t.id !== taskId) }
-          }
-          return col
-        })
-
-        if (movedTask) {
-          return updated.map(col => {
-            if (col.id === newStatus) {
-              return { ...col, tasks: [...col.tasks, movedTask] }
-            }
-            return col
-          })
+    if (data) {
+      setColumns(columns.map(col => {
+        if (col.id === activeColumn) {
+          return { ...col, tasks: [...col.tasks, data] }
         }
-        return updated
-      })
-    } catch (error) {
-      console.error('Error updating task:', error)
+        return col
+      }))
     }
+
+    setNewTaskTitle('')
+    setNewTaskDescription('')
+    setShowAddModal(false)
+    setActiveColumn(null)
   }
 
-  async function deleteTask(taskId) {
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', taskId)
+  async function updateTask(taskId, updates) {
+    const { error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', taskId)
 
-      if (error) throw error
+    if (error) {
+      console.error('Error updating task:', error)
+      return
+    }
 
-      setColumns(prev => prev.map(col => ({
-        ...col,
-        tasks: col.tasks.filter(t => t.id !== taskId)
-      })))
-    } catch (error) {
+    fetchTasks()
+    setEditingTask(null)
+  }
+
+  async function deleteTask(taskId, columnId) {
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId)
+
+    if (error) {
       console.error('Error deleting task:', error)
+      return
+    }
+
+    setColumns(columns.map(col => {
+      if (col.id === columnId) {
+        return { ...col, tasks: col.tasks.filter(t => t.id !== taskId) }
+      }
+      return col
+    }))
+  }
+
+  async function moveTask(taskId, fromColumn, toColumn) {
+    if (fromColumn === toColumn) return
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ status: toColumn })
+      .eq('id', taskId)
+
+    if (error) {
+      console.error('Error moving task:', error)
+      return
+    }
+
+    const task = columns.find(c => c.id === fromColumn)?.tasks.find(t => t.id === taskId)
+    if (task) {
+      setColumns(columns.map(col => {
+        if (col.id === fromColumn) {
+          return { ...col, tasks: col.tasks.filter(t => t.id !== taskId) }
+        }
+        if (col.id === toColumn) {
+          return { ...col, tasks: [...col.tasks, { ...task, status: toColumn }] }
+        }
+        return col
+      }))
     }
   }
 
-  async function updateTaskTitle(taskId, newTitle) {
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ title: newTitle })
-        .eq('id', taskId)
+  function handleDragStart(e, task, columnId) {
+    setDraggedTask({ task, fromColumn: columnId })
+    e.dataTransfer.effectAllowed = 'move'
+  }
 
-      if (error) throw error
+  function handleDragOver(e) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
 
-      setColumns(prev => prev.map(col => ({
-        ...col,
-        tasks: col.tasks.map(t => 
-          t.id === taskId ? { ...t, title: newTitle } : t
-        )
-      })))
-      setEditingTask(null)
-    } catch (error) {
-      console.error('Error updating task:', error)
+  function handleDrop(e, toColumnId) {
+    e.preventDefault()
+    if (draggedTask) {
+      moveTask(draggedTask.task.id, draggedTask.fromColumn, toColumnId)
+      setDraggedTask(null)
     }
   }
 
@@ -167,120 +172,100 @@ export default function Board() {
     window.location.href = '/login'
   }
 
-  function handleDragStart(e, task, columnId) {
-    setDraggedTask({ task, sourceColumn: columnId })
-    e.dataTransfer.effectAllowed = 'move'
-  }
-
-  function handleDragOver(e, columnId) {
-    e.preventDefault()
-    setDragOverColumn(columnId)
-  }
-
-  function handleDragLeave() {
-    setDragOverColumn(null)
-  }
-
-  function handleDrop(e, targetColumnId) {
-    e.preventDefault()
-    setDragOverColumn(null)
-    
-    if (draggedTask && draggedTask.sourceColumn !== targetColumnId) {
-      updateTaskStatus(draggedTask.task.id, targetColumnId)
-    }
-    setDraggedTask(null)
-  }
-
   function getPriorityColor(priority) {
     switch (priority) {
-      case 'high': return 'border-l-red-500'
-      case 'medium': return 'border-l-yellow-500'
-      case 'low': return 'border-l-green-500'
-      default: return 'border-l-slate-500'
+      case 'high': return 'bg-red-500'
+      case 'medium': return 'bg-yellow-500'
+      case 'low': return 'bg-green-500'
+      default: return 'bg-gray-500'
     }
   }
 
-  function getColumnHeaderColor(columnId) {
+  function getColumnColor(columnId) {
     switch (columnId) {
-      case 'todo': return 'bg-slate-600'
-      case 'in-progress': return 'bg-blue-600'
-      case 'review': return 'bg-purple-600'
-      case 'done': return 'bg-green-600'
-      default: return 'bg-slate-600'
+      case 'todo': return 'border-slate-500'
+      case 'in-progress': return 'border-blue-500'
+      case 'review': return 'border-yellow-500'
+      case 'done': return 'border-green-500'
+      default: return 'border-slate-500'
     }
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#3b82f6] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-white text-lg">Loading your tasks...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#3b82f6]"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-slate-900 text-white">
+      {/* Header */}
       <header className="bg-slate-800 border-b border-slate-700 px-4 py-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#3b82f6] rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-white">TaskFlow</h1>
+            <svg className="w-8 h-8 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <h1 className="text-xl font-bold">TaskFlow</h1>
           </div>
-          
           <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-400">{user?.email}</span>
             <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-[#3b82f6] hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors"
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Task
+              Logout
             </button>
-            
-            <div className="flex items-center gap-3">
-              <span className="text-slate-400 text-sm hidden sm:block">{user?.email}</span>
-              <button
-                onClick={handleLogout}
-                className="text-slate-400 hover:text-white transition-colors p-2"
-                title="Logout"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
       </header>
 
+      {/* Board */}
       <main className="p-4 max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-2">Kanban Board</h2>
+          <p className="text-slate-400">Drag and drop tasks between columns to update their status</p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {columns.map(column => (
             <div
               key={column.id}
-              className={`bg-slate-800 rounded-xl overflow-hidden transition-all ${
-                dragOverColumn === column.id ? 'ring-2 ring-[#3b82f6]' : ''
-              }`}
-              onDragOver={(e) => handleDragOver(e, column.id)}
-              onDragLeave={handleDragLeave}
+              className={`bg-slate-800 rounded-xl p-4 border-t-4 ${getColumnColor(column.id)}`}
+              onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
-              <div className={`${getColumnHeaderColor(column.id)} px-4 py-3 flex items-center justify-between`}>
-                <h2 className="text-white font-semibold">{column.title}</h2>
-                <span className="bg-white/20 text-white text-sm px-2 py-0.5 rounded-full">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-lg">{column.title}</h3>
+                <span className="bg-slate-700 text-sm px-2 py-1 rounded-full">
                   {column.tasks.length}
                 </span>
               </div>
-              
-              <div className="p-3 min-h-[200px] max-h-[calc(100vh-280px)] overflow-y-auto space-y-3">
+
+              <div className="space-y-3 min-h-[200px]">
                 {column.tasks.map(task => (
                   <div
-                    key={task.
+                    key={task.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, task, column.id)}
+                    className="bg-slate-700 rounded-lg p-4 cursor-move hover:bg-slate-600 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-medium text-sm">{task.title}</h4>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => setEditingTask(task)}
+                          className="p-1 hover:bg-slate-500 rounded"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => deleteTask(task.id, column.id)}
+                          className="p-1 hover:bg-red-500 rounded"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16
